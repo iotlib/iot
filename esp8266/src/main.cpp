@@ -8,54 +8,70 @@
 #include <Hash.h>
 
 // CONFIG
-#define REMOTE_ADDR "192.168.1.224"
+
+#define REMOTE_ADDR "iot.twinone.xyz"
 #define REMOTE_URL "/echo"
-#define REMOTE_PORT 8080
-#define USE_SSL false
+#define REMOTE_PORT 443
+#define USE_SSL true
+
 // END CONFIG
 
 ESP8266WiFiMulti WiFiMulti;
-WebSocketsClient webSocket;
+WebSocketsClient ws;
 
 
 #define USE_SERIAL Serial
+
+#define LED_PIN D4
+
+void processCommand(uint8_t *payload) {
+  String cmd = (char*)payload;
+  USE_SERIAL.println(cmd);
+  if (!cmd.startsWith("CMD ")) return;
+  cmd = cmd.substring(4);
+
+  if (cmd == "ON") digitalWrite(LED_PIN, HIGH);
+  if (cmd == "OFF") digitalWrite(LED_PIN, LOW);
+}
 
 void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
   switch(type) {
   case WStype_DISCONNECTED:
     USE_SERIAL.printf("[WSc] Disconnected!\n");
     break;
-  case WStype_CONNECTED: {
-    USE_SERIAL.printf("[WSc] Connected to url: %s\n",  payload);
 
+  case WStype_CONNECTED:
+    USE_SERIAL.printf("[WSc] Connected to url: %s\n",  payload);
     // send message to server when Connected
-    webSocket.sendTXT("Hello world!");
-  }
-  break;
+    ws.sendTXT("HELLO b2345245ea");
+    break;
+
   case WStype_TEXT:
     USE_SERIAL.printf("[WSc] get text: %s\n", payload);
-
+    processCommand(payload);
     // send message to server
-    // webSocket.sendTXT("message here");
+    // ws.sendTXT("message here");
     break;
   case WStype_BIN:
-    USE_SERIAL.printf("[WSc] get binary length: %u\n", length);
-    hexdump(payload, length);
+    //USE_SERIAL.printf("[WSc] get binary length: %u\n", length);
+    //hexdump(payload, length);
 
     // send data to server
-    // webSocket.sendBIN(payload, length);
+    // ws.sendBIN(payload, length);
     break;
   }
 
 }
 
 void setup() {
+
+    pinMode(LED_PIN, OUTPUT);
     // USE_SERIAL.begin(921600);
     USE_SERIAL.begin(9600);
 
     //Serial.setDebugOutput(true);
     //USE_SERIAL.setDebugOutput(true);
-    USE_SERIAL.println("...");
+    USE_SERIAL.println();
     USE_SERIAL.println();
     USE_SERIAL.println();
     USE_SERIAL.println();
@@ -80,17 +96,17 @@ void setup() {
     USE_SERIAL.println(WiFi.SSID().c_str());
 
     if (USE_SSL) {
-      webSocket.beginSSL(REMOTE_ADDR, REMOTE_PORT, REMOTE_URL);
+      ws.beginSSL(REMOTE_ADDR, REMOTE_PORT, REMOTE_URL);
     }
     else {
-      webSocket.begin(REMOTE_ADDR, REMOTE_PORT, REMOTE_URL);
+      ws.begin(REMOTE_ADDR, REMOTE_PORT, REMOTE_URL);
     }
 
-    webSocket.onEvent(webSocketEvent);
+    ws.onEvent(webSocketEvent);
 
 }
 
 void loop() {
-    webSocket.loop();
-    delay(1000);
+    ws.loop();
+    delay(200);
 }
