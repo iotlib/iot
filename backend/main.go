@@ -43,7 +43,10 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	// reader
 	go func() {
 		for {
-			_, message, _ := conn.ReadMessage()
+			_, message, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
 			log.Printf("recv: %s", message)
 			broadcast(string(message))
 		}
