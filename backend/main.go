@@ -79,7 +79,7 @@ window.addEventListener("load", function(evt) {
 
 		new_uri += "//" + loc.host;
 		new_uri += {{.}};
-        ws = new WebSocket("new_uri");
+        ws = new WebSocket(new_uri);
         ws.onopen = function(evt) {
             print("OPEN");
         }
