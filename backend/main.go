@@ -10,6 +10,7 @@ import (
 	"fmt"
 )
 
+const Path = "/echo"
 var addr = flag.String("addr", ":8080", "http service address")
 
 var upgrader = websocket.Upgrader{
@@ -41,13 +42,13 @@ func echo(w http.ResponseWriter, r *http.Request) {
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
-	homeTemplate.Execute(w, "ws://"+r.Host+"/echo")
+	homeTemplate.Execute(w, Path)
 }
 
 func main() {
 	flag.Parse()
 	log.SetFlags(0)
-	http.HandleFunc("/echo", echo)
+	http.HandleFunc(Path, echo)
 	http.HandleFunc("/", home)
 	fmt.Println("Listening at", *addr)
 	log.Fatal(http.ListenAndServe(*addr, nil))
@@ -71,7 +72,14 @@ window.addEventListener("load", function(evt) {
         if (ws) {
             return false;
         }
-        ws = new WebSocket("{{.}}");
+		var loc = window.location, new_uri;
+		if (loc.protocol === "https:")
+			new_uri = "wss:";
+		else new_uri = "ws:";
+
+		new_uri += "//" + loc.host;
+		new_uri += {{.}};
+        ws = new WebSocket("new_uri");
         ws.onopen = function(evt) {
             print("OPEN");
         }
