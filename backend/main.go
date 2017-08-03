@@ -34,14 +34,16 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Println("Client connected")
-	defer func() {
-		conn.Close()
-		delete(conns, conn)
-	}()
+
 	conns[conn] = true
 
 	// reader
 	go func() {
+		defer func() {
+			conn.Close()
+			delete(conns, conn)
+		}()
+
 		for {
 			_, message, err := conn.ReadMessage()
 			if err != nil {
