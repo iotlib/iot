@@ -115,8 +115,8 @@ window.addEventListener("load", function(evt) {
         if (!ws) {
             return false;
         }
-        print("SEND: " + input.value);
-        ws.send(input.value);
+        print("SEND: CMD " + input.value);
+        ws.send("CMD " + input.value);
         return false;
     };
     document.getElementById("close").onclick = function(evt) {
