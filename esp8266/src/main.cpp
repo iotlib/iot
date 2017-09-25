@@ -1,76 +1,51 @@
 #include <Arduino.h>
-
 #include <ESP8266WiFi.h>
 #include <ESP8266WiFiMulti.h>
-
-#include <WebSocketsClient.h>
-
-#include <Hash.h>
-
-// CONFIG
-
-#define REMOTE_ADDR "iot.twinone.xyz"
-#define REMOTE_URL "/echo"
-#define REMOTE_PORT 443
-#define USE_SSL true
-
-// END CONFIG
+#include "Messenger.h"
+#include "config.h"
 
 ESP8266WiFiMulti WiFiMulti;
-WebSocketsClient ws;
+Messenger m;
 
 
 #define USE_SERIAL Serial
 
 #define LED_PIN D4
 
-void processCommand(uint8_t *payload) {
+void onMessage(uint8_t *payload, size_t length) {
   String cmd = (char*)payload;
   USE_SERIAL.println(cmd);
   if (!cmd.startsWith("CMD ")) return;
   cmd = cmd.substring(4);
+  cmd.trim();
 
-  if (cmd == "ON") digitalWrite(LED_PIN, HIGH);
-  if (cmd == "OFF") digitalWrite(LED_PIN, LOW);
-}
 
-void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
-  switch(type) {
-  case WStype_DISCONNECTED:
-    USE_SERIAL.printf("[WSc] Disconnected!\n");
-    break;
-
-  case WStype_CONNECTED:
-    USE_SERIAL.printf("[WSc] Connected to url: %s\n",  payload);
-    // send message to server when Connected
-    ws.sendTXT("HELLO b2345245ea");
-    break;
-
-  case WStype_TEXT:
-    USE_SERIAL.printf("[WSc] get text: %s\n", payload);
-    processCommand(payload);
-    // send message to server
-    // ws.sendTXT("message here");
-    break;
-  case WStype_BIN:
-    //USE_SERIAL.printf("[WSc] get binary length: %u\n", length);
-    //hexdump(payload, length);
-
-    // send data to server
-    // ws.sendBIN(payload, length);
-    break;
+  if (cmd == "ON") {
+    USE_SERIAL.println("On");
+    digitalWrite(LED_PIN, LOW);
   }
-
+  if (cmd == "OFF") {
+    USE_SERIAL.println("Off");
+    digitalWrite(LED_PIN, HIGH);
+  }
 }
+
+void onConnected() {
+  Serial.println("Connected");
+  m.send("HELLO " BOARD_ID);
+  m.send("OWNER " ADMIN_ACCOUNT);
+}
+
+void onDisconnected() {
+  Serial.println("Disconnected");
+}
+
+
 
 void setup() {
-
     pinMode(LED_PIN, OUTPUT);
-    // USE_SERIAL.begin(921600);
     USE_SERIAL.begin(9600);
 
-    //Serial.setDebugOutput(true);
-    //USE_SERIAL.setDebugOutput(true);
     USE_SERIAL.println();
     USE_SERIAL.println();
     USE_SERIAL.println();
@@ -82,8 +57,7 @@ void setup() {
         delay(1000);
     }
 
-    WiFiMulti.addAP("Orange-FC53", "95A5E324");
-    WiFiMulti.addAP("R2", "e8257628246fb6");
+    WiFiMulti.addAP(WIFI_SSID, WIFI_PASS);
 
     //WiFi.disconnect();
     while(WiFiMulti.run() != WL_CONNECTED) {
@@ -91,22 +65,22 @@ void setup() {
         USE_SERIAL.print('.');
         USE_SERIAL.flush();
     }
+    USE_SERIAL.println();
 
     USE_SERIAL.print("Connected to ");
     USE_SERIAL.println(WiFi.SSID().c_str());
 
-    if (USE_SSL) {
-      ws.beginSSL(REMOTE_ADDR, REMOTE_PORT, REMOTE_URL);
-    }
-    else {
-      ws.begin(REMOTE_ADDR, REMOTE_PORT, REMOTE_URL);
-    }
-
-    ws.onEvent(webSocketEvent);
-
+    m.begin(onConnected,
+            onDisconnected,
+            onMessage
+    );
 }
 
 void loop() {
-    ws.loop();
-    delay(200);
+    m.loop();
+    // blink for 50ms
+    digitalWrite(LED_PIN, LOW);
+    delay(50);
+    digitalWrite(LED_PIN, HIGH);
+    delay(100);
 }
