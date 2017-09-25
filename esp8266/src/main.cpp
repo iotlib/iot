@@ -34,6 +34,9 @@ void onConnected() {
   Serial.println("Connected");
   m.send("HELLO " BOARD_ID);
   m.send("OWNER " ADMIN_ACCOUNT);
+  #ifdef BOARD_NAME
+  m.send("NAME " BOARD_NAME);
+  #endif
 }
 
 void onDisconnected() {
