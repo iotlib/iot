@@ -6,29 +6,41 @@ import (
 	"fmt"
 
 	"github.com/namsral/flag"
-
 	"github.com/twinone/iot/backend/ws"
 	"github.com/twinone/iot/backend/httpserver"
+	"github.com/gorilla/mux"
 )
 
 const (
-	wsPath    = "/echo"
+	wsPath = "/echo"
 )
 
-var addr = flag.String("addr", ":8080", "http service address and port")
-
+var config map[string]*string
 
 func main() {
+
+	config = map[string]*string{
+		"addr":                flag.String("addr", ":8080", "http service address and port"),
+		"callback_url":        flag.String("callback_url", "", "OAuth Callback URL"),
+		"client_id":           flag.String("client_id", "", "OAuth Client ID"),
+		"client_secret":       flag.String("client_secret", "", "OAuth Client Secret"),
+		"cookie_store_secret": flag.String("cookie_store_secret", "", "Cookie-store secret"),
+	}
 	flag.String(flag.DefaultConfigFlagname, "./config", "path to config file")
+
 	flag.Parse()
 	log.SetFlags(0)
-	go ws.DefaultHub.Run()
-	httpserver.Setup()
 
-	http.HandleFunc(wsPath, ws.DefaultWSHandler)
-	http.HandleFunc("/", httpserver.HomeHandler)
-	http.HandleFunc("/auth/callback", httpserver.AuthHandler)
+	hub := ws.DefaultHub
+	go hub.Run()
 
-	fmt.Println("Listening at", *addr)
-	log.Fatal(http.ListenAndServe(*addr, nil))
+	ss := httpserver.New(config, hub)
+
+	r := mux.NewRouter()
+	ss.RegisterHandlers(r)
+	r.HandleFunc(wsPath, ws.GenWSHandler(hub))
+	http.Handle("/", r)
+
+	fmt.Println("Listening at", *config["addr"])
+	log.Fatal(http.ListenAndServe(*config["addr"], nil))
 }

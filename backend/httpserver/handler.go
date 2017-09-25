@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"html/template"
 
-	"github.com/namsral/flag"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"encoding/base64"
@@ -14,49 +13,47 @@ import (
 	"log"
 	"io/ioutil"
 	"encoding/json"
+	"github.com/gorilla/mux"
+	"github.com/twinone/iot/backend/model"
+	"github.com/twinone/iot/backend/ws"
 )
 
 const (
-	userInfoEndpoint       = "https://www.googleapis.com/oauth2/v3/userinfo"
-	defaultCookieStoreName = "default"
+	userInfoEndpoint = "https://www.googleapis.com/oauth2/v3/userinfo"
+	defaultCookie    = "default"
 )
 
-var (
-	oAuthCallbackUrl  = flag.String("callback_url", "", "OAuth Callback URL")
-	oAuthClientID     = flag.String("client_id", "", "OAuth Client ID")
-	oAuthClientSecret = flag.String("client_secret", "", "OAuth Client Secret")
-	cookieStoreSecret = flag.String("cookie_store_secret", "", "Cookie-store secret")
-)
-var homeTemplate = template.Must(template.ParseFiles("www/index.tmpl"))
+var signinTemplate = template.Must(template.ParseFiles("www/signin.tmpl"))
+var dashboardTemplate = template.Must(template.ParseFiles("www/dashboard.tmpl"))
 
-var store *sessions.CookieStore
-var cfg *oauth2.Config
-
-type User struct {
-	Sub string `json:"sub"`
-	Name string `json:"name"`
-	GivenName string `json:"given_name"`
-	FamilyName string `json:"family_name"`
-	Profile string `json:"profile"`
-	Picture string `json:"picture"`
-	Email string `json:"email"`
-	EmailVerified string `json:"email_verified"`
-	Gender string `json:"gender"`
+type DashboardInfo struct {
+	User    *model.User
+	Devices []*model.Device
 }
 
+type Server struct {
+	store *sessions.CookieStore
+	cfg   *oauth2.Config
+	hub   *ws.Hub
+}
 
+func New(config map[string]*string, hub *ws.Hub) (s *Server) {
+	log.Println("Config:", config)
+	return &Server{
+		hub:   hub,
+		store: sessions.NewCookieStore([]byte(*config["cookie_store_secret"])),
 
-func Setup() {
-	store = sessions.NewCookieStore([]byte(*cookieStoreSecret))
-	cfg = &oauth2.Config{
-		ClientID:     *oAuthClientID,
-		ClientSecret: *oAuthClientSecret,
-		RedirectURL:  *oAuthCallbackUrl,
-		Scopes: []string{
-			// You have to select your own scope from here -> https://developers.google.com/identity/protocols/googlescopes#google_sign-in
-			"https://www.googleapis.com/auth/userinfo.email",
+		cfg: &oauth2.Config{
+			ClientID:     *config["client_id"],
+			RedirectURL:  *config["callback_url"],
+			ClientSecret: *config["client_secret"],
+			Scopes: []string{
+				// You have to select your own scope from here -> https://developers.google.com/identity/protocols/googlescopes#google_sign-in
+				"https://www.googleapis.com/auth/userinfo.email",
+				"https://www.googleapis.com/auth/userinfo.profile",
+			},
+			Endpoint: google.Endpoint,
 		},
-		Endpoint: google.Endpoint,
 	}
 }
 
@@ -66,14 +63,13 @@ func randToken() string {
 	return base64.StdEncoding.EncodeToString(b)
 }
 
-func getLoginURL(state string) string {
-	return cfg.AuthCodeURL(state)
+func (s *Server) getLoginURL(state string) string {
+	return s.cfg.AuthCodeURL(state)
 }
 
-func AuthHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, defaultCookieStoreName)
+func (s *Server) AuthHandler(w http.ResponseWriter, r *http.Request) {
+	session, err := s.GetSession(w, r)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	savedState := session.Values["state"]
@@ -85,14 +81,14 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 	code := r.URL.Query()["code"][0]
 	log.Println("Got auth code:", code)
 
-	tok, err := cfg.Exchange(context.Background(), code)
+	tok, err := s.cfg.Exchange(context.Background(), code)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	log.Println("Got access token:", tok)
-	client := cfg.Client(context.Background(), tok)
+	client := s.cfg.Client(context.Background(), tok)
 	resp, err := client.Get(userInfoEndpoint)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -100,21 +96,89 @@ func AuthHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 	data, _ := ioutil.ReadAll(resp.Body)
-	var u = &User{}
+	var u = &model.User{}
 	json.Unmarshal(data, u)
 
-	w.Write([]byte("Logged in as: " + u.Email))
+	session.Values["profile"] = data
+	log.Println("profile:", string(data))
+	session.Save(r, w)
+
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
-func HomeHandler(w http.ResponseWriter, r *http.Request) {
-	session, err := store.Get(r, defaultCookieStoreName)
+
+func (s *Server) IndexLoginDashboardHandler(w http.ResponseWriter, r *http.Request) {
+	session, user, err := s.GetUser(w, r)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
 		return
 	}
-	state := randToken()
-	session.Values["state"] = state
+	if user == nil {
+		state := randToken()
+		session.Values["state"] = state
 
+		session.Save(r, w)
+		signinTemplate.Execute(w, s.getLoginURL(state))
+		return
+	}
+
+	di := &DashboardInfo{
+		User:    user,
+		Devices: s.hub.GetDevices(user.Email),
+	}
+	log.Println("devices:", di.Devices)
+
+	// Logged in
+	dashboardTemplate.Execute(w, di)
+}
+
+func (s *Server) RegisterHandlers(r *mux.Router) {
+	r.HandleFunc("/", s.IndexLoginDashboardHandler)
+	r.HandleFunc("/signout", s.SignOutHandler)
+	r.HandleFunc("/auth/callback", s.AuthHandler)
+}
+
+func (s *Server) SignOutHandler(w http.ResponseWriter, r *http.Request) {
+	session, _, err := s.GetUser(w, r)
+	if err != nil {
+		return
+	}
+	session.Values["state"] = ""
+	session.Values["profile"] = ""
 	session.Save(r, w)
-	homeTemplate.Execute(w, getLoginURL(state))
+	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+}
+
+func (s *Server) GetSession(w http.ResponseWriter, r *http.Request) (*sessions.Session, error) {
+	session, err := s.store.Get(r, defaultCookie)
+	if err != nil {
+		w.Header().Add("Set-Cookie", defaultCookie+"=empty;Max-Age=0")
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Error, try refreshing the page"))
+		log.Println("Error getting session:", err.Error())
+		return nil, err
+	}
+	return session, nil
+}
+
+func (s *Server) GetUser(w http.ResponseWriter, r *http.Request) (*sessions.Session, *model.User, error) {
+	session, err := s.GetSession(w, r)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	profile, ok := session.Values["profile"]
+	if !ok {
+		return session, nil, nil
+	}
+	data, ok := profile.([]byte)
+	if !ok {
+		return session, nil, nil
+	}
+	var u = &model.User{}
+	err = json.Unmarshal(data, u)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Println("Error getting user:", err.Error())
+		return session, nil, err
+	}
+	return session, u, nil
 }

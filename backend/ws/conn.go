@@ -7,14 +7,7 @@ import (
 	"log"
 	"sync"
 	"strings"
-)
-
-type State int
-
-const (
-	PendingHello State = iota
-	PendingOwner
-	Connected
+	"github.com/twinone/iot/backend/model"
 )
 
 type Command string
@@ -22,6 +15,7 @@ type Command string
 const (
 	Hello = "HELLO"
 	Owner = "OWNER"
+	Name  = "NAME"
 	Bye   = "BYE"
 )
 
@@ -45,7 +39,6 @@ const (
 // WSHandler using the DefaultHub
 var DefaultWSHandler = GenWSHandler(DefaultHub)
 
-
 var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 	ReadBufferSize:  1024,
@@ -58,9 +51,7 @@ type Conn struct {
 	Send chan []byte
 	Recv chan []byte
 
-	State State
-	owner string
-	id    string
+	device *model.Device
 
 	mx     sync.Mutex
 	closed bool
@@ -122,26 +113,30 @@ func (c *Conn) processMessage(message []byte) bool {
 
 	switch cmd {
 	case Hello:
-		if len(ss) < 2 || c.State != PendingHello {
+		if len(ss) < 2 || c.device.State != model.StatePendingHello {
 			c.Close();
 			return false
 		}
-		c.id = ss[1]
+		c.device.Id = ss[1]
 		// TODO check if id is ok
-		c.State = PendingOwner
+		c.device.State = model.StatePendingOwner
 	case Owner:
-		if len(ss) < 2 || c.State != PendingOwner {
+		if len(ss) < 2 || c.device.State != model.StatePendingOwner {
 			c.Close()
 			return false
 		}
-		c.owner = ss[1]
+		c.device.Owner = ss[1]
 		// TODO check if owner is registered etc
-		c.State = Connected
-		DefaultHub.register <- c
+		c.device.State = model.StateConnected
+		c.hub.register <- c
+	case Name:
+		if len(ss) >= 2 {
+			c.device.Name = ss[1]
+		}
 	case Bye:
 		c.Close()
 	default:
-		if c.State != Connected {
+		if c.device.State != model.StateConnected {
 			log.Println("Unexpected msg:", msg)
 			c.Close()
 			return false
@@ -159,12 +154,11 @@ func (c *Conn) Close() {
 		close(c.Send)
 		close(c.Recv)
 		c.ws.Close()
-		if c.State == Connected {
+		if c.device.State == model.StateConnected {
 			c.hub.unregister <- c
 		}
 	}
 }
-
 
 // Generate a new WS Handler associated to a Hub
 func GenWSHandler(hub *Hub) func(w http.ResponseWriter, r *http.Request) {
@@ -175,11 +169,13 @@ func GenWSHandler(hub *Hub) func(w http.ResponseWriter, r *http.Request) {
 		}
 
 		conn := &Conn{
-			Send:  make(chan []byte, queueSize),
-			Recv:  make(chan []byte, queueSize),
-			State: PendingHello,
-			ws:    ws,
-			hub:   hub,
+			Send: make(chan []byte, queueSize),
+			Recv: make(chan []byte, queueSize),
+			device: &model.Device{
+				State: model.StatePendingHello,
+			},
+			ws:  ws,
+			hub: hub,
 		}
 
 		go conn.writePump()
