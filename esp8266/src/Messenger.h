@@ -1,3 +1,7 @@
+#ifndef __MESSENGER_H__
+#define __MESSENGER_H__
+
+
 #include <WebSocketsClient.h>
 #include <Hash.h>
 
@@ -22,3 +26,6 @@ public:
   void loop();
 
 };
+
+
+#endif /* __MESSENGER_H__ */
