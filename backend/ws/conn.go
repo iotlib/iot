@@ -8,15 +8,15 @@ import (
 	"sync"
 	"strings"
 	"github.com/twinone/iot/backend/model"
+	"strconv"
 )
 
-type Command string
+type State int
 
 const (
-	Hello = "HELLO"
-	Owner = "OWNER"
-	Name  = "NAME"
-	Bye   = "BYE"
+	StatePendingHello State = iota
+	StatePendingOwner
+	StateConnected
 )
 
 const (
@@ -85,7 +85,11 @@ func (c *Conn) readPump() {
 	defer c.Close()
 	c.ws.SetReadLimit(maxMessageSize)
 	c.ws.SetReadDeadline(time.Now().Add(pongWait))
-	c.ws.SetPongHandler(func(string) error { c.ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
+	c.ws.SetPongHandler(func(string) error {
+		c.device.LastSeen = time.Now().Unix()
+		c.ws.SetReadDeadline(time.Now().Add(pongWait));
+		return nil
+	})
 	for {
 		_, message, err := c.ws.ReadMessage()
 		if err != nil {
@@ -94,6 +98,7 @@ func (c *Conn) readPump() {
 			//}
 			break
 		}
+		c.device.LastSeen = time.Now().Unix()
 		log.Println("RECV:", string(message))
 		c.processMessage(message)
 
@@ -106,43 +111,58 @@ func (c *Conn) readPump() {
 }
 
 // Returns true if message is ok (expected message)
-func (c *Conn) processMessage(message []byte) bool {
+func (c *Conn) processMessage(message []byte) {
 	msg := string(message)
-	ss := strings.SplitN(msg, " ", 2)
+	ss := strings.Split(msg, " ")
 	cmd := strings.Trim(ss[0], " \t\r\n")
-
 	switch cmd {
-	case Hello:
+	case model.RespHello:
 		if len(ss) < 2 || c.device.State != model.StatePendingHello {
 			c.Close();
-			return false
+			return
 		}
 		c.device.Id = ss[1]
 		// TODO check if id is ok
 		c.device.State = model.StatePendingOwner
-	case Owner:
+	case model.RespOwner:
 		if len(ss) < 2 || c.device.State != model.StatePendingOwner {
 			c.Close()
-			return false
+			return
 		}
 		c.device.Owner = ss[1]
 		// TODO check if owner is registered etc
 		c.device.State = model.StateConnected
 		c.hub.register <- c
-	case Name:
+	case model.RespName:
 		if len(ss) >= 2 {
 			c.device.Name = ss[1]
 		}
-	case Bye:
+	case model.RespCap:
+		if len(ss) < 4 {
+			c.Close()
+			return
+		}
+		pin, err := strconv.Atoi(ss[1])
+		if err != nil {
+			log.Println("Error:", err)
+			c.Close()
+			return
+		}
+		cmd := ss[2]
+		name := ss[3]
+		c.device.Caps = append(c.device.Caps, model.Cap{
+			Cmd:  cmd,
+			Pin:  pin,
+			Name: name,
+		})
+
+	case model.RespBye:
 		c.Close()
 	default:
-		if c.device.State != model.StateConnected {
-			log.Println("Unexpected msg:", msg)
-			c.Close()
-			return false
-		}
+		log.Println("Unexpected msg:", msg)
+		c.Close()
+		return
 	}
-	return true
 }
 
 func (c *Conn) Close() {

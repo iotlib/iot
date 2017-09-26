@@ -9,6 +9,7 @@ import (
 	"github.com/twinone/iot/backend/ws"
 	"github.com/twinone/iot/backend/httpserver"
 	"github.com/gorilla/mux"
+	"github.com/twinone/iot/backend/db"
 )
 
 const (
@@ -18,7 +19,6 @@ const (
 var config map[string]*string
 
 func main() {
-
 	config = map[string]*string{
 		"addr":                flag.String("addr", ":8080", "http service address and port"),
 		"callback_url":        flag.String("callback_url", "", "OAuth Callback URL"),
@@ -27,9 +27,11 @@ func main() {
 		"cookie_store_secret": flag.String("cookie_store_secret", "", "Cookie-store secret"),
 	}
 	flag.String(flag.DefaultConfigFlagname, "./config", "path to config file")
-
 	flag.Parse()
-	log.SetFlags(0)
+
+
+	sess := db.Init()
+	defer sess.Close()
 
 	hub := ws.DefaultHub
 	go hub.Run()

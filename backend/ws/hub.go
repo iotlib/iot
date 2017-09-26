@@ -36,9 +36,6 @@ func (h *Hub) GetDevices(owner string) []*model.Device {
 		log.Println(k)
 		if conn, ok := h.IdsToConns[k]; ok {
 			res = append(res, conn.device)
-		} else {
-			// device is offline
-			// TODO
 		}
 	}
 	return res
@@ -64,9 +61,9 @@ func (h *Hub) Run() {
 			h.OwnersToIds[conn.device.Owner][conn.device.Id] = true
 			h.IdsToConns[conn.device.Id] = conn
 
-			log.Println("Registered conn")
+			//log.Println("Registered conn")
 		case conn := <-h.unregister:
-			log.Println("Unregistered conn")
+			//log.Println("Unregistered conn")
 			delete(h.conns, conn)
 		}
 	}

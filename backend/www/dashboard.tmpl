@@ -14,7 +14,14 @@
 
     <ul>
     {{range .Devices}}
-        <li>Name: {{.Name}} ({{.Id}})</li>
+        <li>
+            Name: {{.Name}} (Last seen {{.LastSeen}})
+            <ul>
+            {{range .Caps}}
+                <li>{{.Name}} ({{.Cmd}}, {{.Pin}})</li>
+            {{end}}
+            </ul>
+        </li>
     {{end}}
     </ul>
     <br>
