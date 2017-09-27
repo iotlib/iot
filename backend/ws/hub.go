@@ -1,8 +1,8 @@
 package ws
 
 import (
-	"log"
 	"github.com/twinone/iot/backend/model"
+	"log"
 )
 
 var DefaultHub = NewHub()
@@ -25,6 +25,20 @@ func NewHub() *Hub {
 		OwnersToIds: make(map[string]map[string]bool),
 		IdsToConns:  make(map[string]*Conn),
 	}
+}
+
+func (h *Hub) GetConns(owner string) []*Conn {
+	idmap := h.OwnersToIds[owner]
+	res := make([]*Conn, 0, len(idmap))
+
+	for k, _ := range idmap {
+
+		log.Println(k)
+		if conn, ok := h.IdsToConns[k]; ok {
+			res = append(res, conn)
+		}
+	}
+	return res
 }
 
 func (h *Hub) GetDevices(owner string) []*model.Device {

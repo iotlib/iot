@@ -2,13 +2,13 @@ package ws
 
 import (
 	"github.com/gorilla/websocket"
-	"net/http"
-	"time"
-	"log"
-	"sync"
-	"strings"
 	"github.com/twinone/iot/backend/model"
+	"log"
+	"net/http"
 	"strconv"
+	"strings"
+	"sync"
+	"time"
 )
 
 type State int
@@ -66,7 +66,7 @@ func (c *Conn) writePump() {
 	for {
 		select {
 		case msg, ok := <-c.Send:
-			if (!ok) {
+			if !ok {
 				c.ws.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
@@ -87,7 +87,7 @@ func (c *Conn) readPump() {
 	c.ws.SetReadDeadline(time.Now().Add(pongWait))
 	c.ws.SetPongHandler(func(string) error {
 		c.device.LastSeen = time.Now().Unix()
-		c.ws.SetReadDeadline(time.Now().Add(pongWait));
+		c.ws.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
 	for {
@@ -118,7 +118,7 @@ func (c *Conn) processMessage(message []byte) {
 	switch cmd {
 	case model.RespHello:
 		if len(ss) < 2 || c.device.State != model.StatePendingHello {
-			c.Close();
+			c.Close()
 			return
 		}
 		c.device.Id = ss[1]
@@ -135,7 +135,7 @@ func (c *Conn) processMessage(message []byte) {
 		c.hub.register <- c
 	case model.RespName:
 		if len(ss) >= 2 {
-			c.device.Name = ss[1]
+			c.device.Name = strings.Trim(strings.SplitN(msg, " ", 2)[1], " \t\n")
 		}
 	case model.RespCap:
 		if len(ss) < 4 {
@@ -149,7 +149,8 @@ func (c *Conn) processMessage(message []byte) {
 			return
 		}
 		cmd := ss[2]
-		name := ss[3]
+		name := strings.Trim(strings.SplitN(msg, " ", 4)[3], " \t\n")
+
 		c.device.Caps = append(c.device.Caps, model.Cap{
 			Cmd:  cmd,
 			Pin:  pin,

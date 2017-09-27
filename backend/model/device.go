@@ -47,10 +47,11 @@ type Cap struct {
 }
 
 type Device struct {
-	Id       string `json:"id"`
-	Name     string `json:"name"`
-	Owner    string `json:"owner"`
-	Caps     []Cap  `json:"caps"`
-	State    State  `json:"state"`
-	LastSeen int64  `json:"lastseen"`
+	Id        string `json:"id"`
+	Name      string `json:"name"`
+	Owner     string `json:"owner"`
+	Caps      []Cap  `json:"caps"`
+	State     State  `json:"state"`
+	LastSeen  int64  `json:"lastseen"`
+	Confirmed bool   `json:"confirmed"`
 }
