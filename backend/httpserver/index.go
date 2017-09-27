@@ -10,6 +10,5 @@ func (s *Server) indexHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/signin", http.StatusTemporaryRedirect)
 	} else {
 		http.Redirect(w, r, "/dashboard", http.StatusTemporaryRedirect)
-
 	}
 }

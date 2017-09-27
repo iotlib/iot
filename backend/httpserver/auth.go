@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/twinone/iot/backend/db"
 	"github.com/twinone/iot/backend/model"
+	"html/template"
 )
 
 type AuthedHandler = func(w http.ResponseWriter, r *http.Request, c *sessions.Session, user *model.User)
@@ -40,7 +41,8 @@ func (s *Server) signinHandler(w http.ResponseWriter, r *http.Request) {
 	c.Save(r, w)
 
 	log.Println("uid:", uid)
-	signinTemplate.Execute(w, s.getLoginURL(uid))
+	t := template.Must(template.ParseFiles("www/signin.html"))
+	t.Execute(w, s.getLoginURL(uid))
 }
 
 func (s *Server) authCallbackHandler(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +94,6 @@ func (s *Server) authCallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) signOutHandler(w http.ResponseWriter, r *http.Request, cookie *sessions.Session, user *model.User) {
 	tok := cookie.Values["state"]
-	log.Println("Removing tok:", tok)
 	db.RemoveAccessToken(tok.(string))
 
 	// Generate a new state for the user

@@ -23,7 +23,7 @@ func New(config map[string]*string, hub *ws.Hub) (s *Server) {
 		//store: sessions.NewCookieStore([]byte(*config["cookie_store_secret"])),
 		store: mongostore.NewMongoStore(
 			db.GetCookieCollection(),
-			3600,
+			3600*24*365*10,
 			true,
 			[]byte(*config["cookie_store_secret"])),
 
@@ -47,11 +47,17 @@ func (s *Server) GetCookie(r *http.Request) *sessions.Session {
 }
 
 func (s *Server) RegisterHandlers(r *mux.Router) {
-	r.HandleFunc("/", s.indexHandler)
+
+	//	r.HandleFunc("/", s.indexHandler)
 	r.HandleFunc("/signin", s.signinHandler)
 	r.HandleFunc("/auth/callback", s.authCallbackHandler)
 
-	r.HandleFunc("/dashboard", s.Auth(s.dashboardHandler))
+	// protected endpoints
+	r.PathPrefix("/api").Handler(s.Auth(s.apiHandler))
 	r.HandleFunc("/signout", s.Auth(s.signOutHandler))
+	r.HandleFunc("/dashboard", s.Auth(s.dashboardHandler))
+
+	r.HandleFunc("/", s.indexHandler)
+	r.PathPrefix("/").Handler(http.FileServer(http.Dir("./www/")))
 
 }
