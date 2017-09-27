@@ -1,15 +1,15 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
-	"fmt"
 
-	"github.com/namsral/flag"
-	"github.com/twinone/iot/backend/ws"
-	"github.com/twinone/iot/backend/httpserver"
 	"github.com/gorilla/mux"
+	"github.com/namsral/flag"
 	"github.com/twinone/iot/backend/db"
+	"github.com/twinone/iot/backend/httpserver"
+	"github.com/twinone/iot/backend/ws"
 )
 
 const (
@@ -29,7 +29,6 @@ func main() {
 	flag.String(flag.DefaultConfigFlagname, "./config", "path to config file")
 	flag.Parse()
 
-
 	sess := db.Init()
 	defer sess.Close()
 
@@ -39,8 +38,8 @@ func main() {
 	ss := httpserver.New(config, hub)
 
 	r := mux.NewRouter()
-	ss.RegisterHandlers(r)
 	r.HandleFunc(wsPath, ws.GenWSHandler(hub))
+	ss.RegisterHandlers(r)
 	http.Handle("/", r)
 
 	fmt.Println("Listening at", *config["addr"])
