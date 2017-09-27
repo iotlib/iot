@@ -6,5 +6,6 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="GOPATH &lt;backend&gt;" level="project" />
+    <orderEntry type="library" name="bootstrap-toggle" level="application" />
   </component>
 </module>
