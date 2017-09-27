@@ -13,7 +13,7 @@ Processor proc(&m);
 #define LED_PIN D4
 
 void onMessage(uint8_t *payload, size_t length) {
-  //proc.process(payload, length);
+  proc.process(payload, length);
 }
 
 void onConnected() {
@@ -23,8 +23,6 @@ void onConnected() {
   #ifdef BOARD_NAME
   m.send("NAME " BOARD_NAME);
   #endif
-  // TODO store this in EEPROM
-  m.send(RESP_CAP " " + String(D3) + " " CMD_DIGITAL_WRITE + " Light Bulb");
 }
 
 void onDisconnected() {
@@ -71,8 +69,10 @@ void setup() {
 void loop() {
     m.loop();
     // blink for 50ms
+    /*
     digitalWrite(LED_PIN, LOW);
     delay(50);
     digitalWrite(LED_PIN, HIGH);
     delay(100);
+    */
 }
