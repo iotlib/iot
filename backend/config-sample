@@ -3,3 +3,4 @@ callback_url https://iot.twinone.xyz/auth/callback
 client_id YOUR_CLIENT_ID
 client_secret YOUR_CLIENT_SECRET
 cookie_store_secret YOUR_COOKIESTORE_SECRET
+hi
