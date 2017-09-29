@@ -5,6 +5,7 @@ This project aims to get your home automated for the lowest price,
 while providing a secure environment and a beautiful interface.
 
 Demo moving blinds up and down
+
 ![](https://user-images.githubusercontent.com/4309591/31030903-40ab4444-a557-11e7-8f3c-9efa34cf37f4.gif)
 
 # Security
