@@ -7,27 +7,27 @@ nav#mainNav.navbar.navbar-expand-lg.navbar-dark.bg-dark.fixed-top
     ul#exampleAccordion.navbar-nav.navbar-sidenav
       li.nav-item(data-toggle='tooltip', data-placement='right', title='Dashboard' data-nav-target="dashboard")
         a.nav-link(href='#')
-          i.fa.fa-fw.fa-dashboard
+          i.mr-3.fa.fa-fw.fa-dashboard
           span.nav-link-text
             | Dashboard
       li.nav-item(data-toggle='tooltip', data-placement='right', title='My devices' data-nav-target="devices")
         a.nav-link(href='#')
-          i.fa.fa-fw.fa-area-chart
+          i.mr-3.fa.fa-fw.fa-th
           span.nav-link-text
             | My devices
       li.nav-item(data-toggle='tooltip', data-placement='right', title='Guest access' data-nav-target="guests")
         a.nav-link(href='#')
-          i.fa.fa-fw.fa-table
+          i.mr-3.fa.fa-fw.fa-users
           span.nav-link-text
             | Guest access
       li.nav-item(data-toggle='tooltip', data-placement='right', title='Account' data-nav-target="account")
         a.nav-link(href='#')
-          i.fa.fa-fw.fa-table
+          i.mr-3.fa.fa-fw.fa-user
           span.nav-link-text
             | Account
       li.nav-item
-        a.nav-link(data-toggle='modal', data-target='#exampleModal')
-          i.fa.fa-fw.fa-sign-out
+        a#nav-signout.nav-link(data-toggle='modal', data-target='#exampleModal')
+          i.mr-3.fa.fa-fw.fa-sign-out
           span.nav-link-text
             | Sign out
 

@@ -23,13 +23,6 @@ html(lang='en')
     .content-wrapper
       .container-fluid
         .container.page-section.page-section-dashboard
-          big.text-muted.align-middle Light
-          div.switch
-            label
-              input(id='lightswitch' type='checkbox' checked)
-              span.slider.round
-
-
         .container.page-section.page-section-devices
         .container.page-section.page-section-guests
         .container.page-section.page-section-account
@@ -45,12 +38,17 @@ html(lang='en')
 
       include includes/js/core.pug
 
-      // Page level plugin JavaScript
+
+      include templates/devicecard
+      include templates/functionline
+
+      include includes/js/custom.pug
+
+  // Page level plugin JavaScript
       //script(src='vendor/chart.js/Chart.min.js')
       //script(src='vendor/datatables/jquery.dataTables.js')
       //script(src='vendor/datatables/dataTables.bootstrap4.js')
 
-      include includes/js/custom.pug
 
       // Custom scripts for this page
       //script(src='js/sb-admin-datatables.min.js')

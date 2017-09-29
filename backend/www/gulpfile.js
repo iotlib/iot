@@ -49,7 +49,8 @@ gulp.task('minify-css', ['sass'], function() {
 // Minify custom JS
 gulp.task('minify-js', function() {
   return gulp.src(['js/**/*.js', '!js/**/*.min.js'])
-    .pipe(uglify())
+    .pipe(uglify({
+    }))
     .pipe(header(banner, {
       pkg: pkg
     }))

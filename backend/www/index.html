@@ -25,11 +25,11 @@
         <div
             class="collapse navbar-collapse" id="navbarResponsive">
             <ul class="navbar-nav navbar-sidenav" id="exampleAccordion">
-                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="Dashboard" data-nav-target="dashboard"><a class="nav-link" href="#"><i class="fa fa-fw fa-dashboard"></i><span class="nav-link-text">Dashboard</span></a></li>
-                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="My devices" data-nav-target="devices"><a class="nav-link" href="#"><i class="fa fa-fw fa-area-chart"></i><span class="nav-link-text">My devices</span></a></li>
-                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="Guest access" data-nav-target="guests"><a class="nav-link" href="#"><i class="fa fa-fw fa-table"></i><span class="nav-link-text">Guest access</span></a></li>
-                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="Account" data-nav-target="account"><a class="nav-link" href="#"><i class="fa fa-fw fa-table"></i><span class="nav-link-text">Account</span></a></li>
-                <li class="nav-item"><a class="nav-link" data-toggle="modal" data-target="#exampleModal"><i class="fa fa-fw fa-sign-out"></i><span class="nav-link-text">Sign out</span></a></li>
+                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="Dashboard" data-nav-target="dashboard"><a class="nav-link" href="#"><i class="mr-3 fa fa-fw fa-dashboard"></i><span class="nav-link-text">Dashboard</span></a></li>
+                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="My devices" data-nav-target="devices"><a class="nav-link" href="#"><i class="mr-3 fa fa-fw fa-th"></i><span class="nav-link-text">My devices</span></a></li>
+                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="Guest access" data-nav-target="guests"><a class="nav-link" href="#"><i class="mr-3 fa fa-fw fa-users"></i><span class="nav-link-text">Guest access</span></a></li>
+                <li class="nav-item" data-toggle="tooltip" data-placement="right" title="Account" data-nav-target="account"><a class="nav-link" href="#"><i class="mr-3 fa fa-fw fa-user"></i><span class="nav-link-text">Account</span></a></li>
+                <li class="nav-item"><a class="nav-link" id="nav-signout" data-toggle="modal" data-target="#exampleModal"><i class="mr-3 fa fa-fw fa-sign-out"></i><span class="nav-link-text">Sign out</span></a></li>
             </ul>
             <ul class="navbar-nav sidenav-toggler">
                 <li class="nav-item"><a class="nav-link text-center" id="sidenavToggler"><i class="fa fa-fw fa-angle-left"></i></a></li>
@@ -112,9 +112,7 @@
     </nav>
     <div class="content-wrapper">
         <div class="container-fluid">
-            <div class="container page-section page-section-dashboard"><big class="text-muted align-middle">Light</big>
-                <div class="switch"><label><input id="lightswitch" type="checkbox" checked><span class="slider round"></span></label></div>
-            </div>
+            <div class="container page-section page-section-dashboard"></div>
             <div class="container page-section page-section-devices"></div>
             <div class="container page-section page-section-guests"></div>
             <div class="container page-section page-section-account"></div>
@@ -144,16 +142,61 @@
         <script src="vendor/bootstrap/js/bootstrap.min.js"></script>
         <!-- Core plugin JavaScript-->
         <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
-        <!-- Page level plugin JavaScript-->
-        <!--script(src='vendor/chart.js/Chart.min.js')-->
-        <!--script(src='vendor/datatables/jquery.dataTables.js')-->
-        <!--script(src='vendor/datatables/dataTables.bootstrap4.js')-->
-        <!-- Custom scripts for all pages-->
-        <script src="js/sb-admin.min.js"></script>
-        <!-- Custom scripts for this page-->
-        <!--script(src='js/sb-admin-datatables.min.js')-->
-        <!--script(src='js/sb-admin-charts.min.js')-->
+        <script class="template-devicecard" type="text/x-custom-template">
+            <div class="card collapse-card devicecard">
+                <div class="card-header" data-toggle="collapse" data-target="#{id}">
+                    <h4>{title}</h4><small class="text-muted text-uppercase">{online} - ID: {deviceid}</small></div>
+                <div class="card-body-wrapper collapse show" id="{id}">
+                    <!-- The actual functions of the device-->
+                    <ul class="list-group list-group-flush"></ul>
+                    <div class="card-block">
+                        <div class="card-body clearfix">
+                            <div class="pull-right clearfix"><button class="btn-delete-device small btn btn-outline-danger">Delete device</button><span>&nbsp;</span><button class="btn-add-function small btn btn-primary">Add function</button></div>
+                        </div>
+                    </div>
+                </div>
+            </div><br></script>
+        <script class="template-functionline" type="text/x-custom-template">
+            <li class="list-group-item">
+                <form>
+                    <div class="form-row align-items-center">
+                        <div class="form-group col-12 col-sm-6"><small class="text-muted">Function name</small><input class="function-name form-control" type="text" placeholder="Name"></div>
+                        <div class="form-group col-6 col-sm-2"><small class="text-muted">Pin</small><input class="function-pin form-control" type="tel" placeholder="Pin" onkeypress="return event.charCode &gt;= 48 &amp;&amp; event.charCode &lt;= 57"></div>
+                        <!-- for now, always digital write-->
+                        <!--.form-group.col-6.col-sm-4small.text-muted Function
+br
+select.custom-select
+    option(value='DW' selected) Digital Write
+    option(value='DR') Digital Read
+    option(value='AW') Analog Write
+    option(value='AR') Analog Read
+
+
+-->
+                    </div>
+                    <div class="form-row align-items-center">
+                        <div class="form-group col-auto func-dw func-group"><label class="custom-control custom-checkbox mb-2 mr-sm-2 mb-sm-0"><input class="function-dw-invert custom-control-input" type="checkbox"><span class="custom-control-indicator"></span><span class="custom-control-description">Invert</span></label></div>
+                        <div
+                            class="form-group col-auto func-dw func-group"><select class="function-dw-type custom-select mb-2 mr-sm-2 mb-sm-0"><option value="switch" selected>Switch</option><option value="button">Push button</option><option value="tmr">Timer button</option></select></div>
+    </div>
+    <div class="form-row align-items-center">
+        <div class="col-12"><span class="pull-right"><input class="btn-cancel btn btn-secondary" type="button" value="Cancel"><span>&nbsp;</span><input class="btn-save btn btn-primary" type="button" value="Save"></span>
+        </div>
+    </div>
+    </form>
+    </li>
+    </script>
+    <!-- Custom scripts for all pages-->
+    <script src="js/sb-admin.min.js"></script>
     </div>
 </body>
+<!-- Page level plugin JavaScript//script(src='vendor/chart.js/Chart.min.js')
+//script(src='vendor/datatables/jquery.dataTables.js')
+//script(src='vendor/datatables/dataTables.bootstrap4.js')
+
+
+// Custom scripts for this page
+//script(src='js/sb-admin-datatables.min.js')
+//script(src='js/sb-admin-charts.min.js')-->
 
 </html>

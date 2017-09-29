@@ -1,18 +1,35 @@
 (function ($) {
+    // see https://stackoverflow.com/a/18234317
+    String.prototype.formatUnicorn = function () {
+
+        var str = this.toString();
+        if (arguments.length) {
+            var t = typeof arguments[0];
+            var key;
+            var args = ("string" === t || "number" === t) ?
+                Array.prototype.slice.call(arguments)
+                : arguments[0];
+
+            for (key in args) {
+                str = str.replace(new RegExp("\\{" + key + "\\}", "gi"), args[key]);
+            }
+        }
+
+        return str;
+    };
+
     "use strict" // Start of use strict
 
+
     function setup() {
-        selectPageSection("dashboard")
+        selectPageSection("devices")
 
 
-        $('#lightswitch').click(function () {
-            sendLight()
-        })
     }
 
     setup()
 
-    $.getJSON("/api", function (data) {
+    $.getJSON("/api/profile", function (data) {
         console.log("Json resp:", data)
         window.Profile = data
         console.log(JSON.stringify(data, " ", " "))
@@ -24,50 +41,143 @@
         console.log("ok")
     }
 
-    function sendCommand(cmd) {
-        $.getJSON("/api?cmd=" + cmd)
+    function executeFunction(cmd) {
+        console.log("posting:", cmd)
+        $.post("/api/exec", JSON.stringify(cmd), function (resp) {
+            console.log("api cmd response:", resp)
+        }, 'json')
     }
 
-    var high = true
-
-    function sendLight() {
-        high = !high
-        var cmd = "DW 2 " + (high ? "LOW" : "HIGH")
-        console.log("Sending:", cmd)
-        sendCommand(cmd)
-
-
-    }
 
     function onProfileLoaded() {
-        var ul = $('<ul class="list-group"/>')
-        Profile.devices.forEach(function (device) {
-            console.log("device:", device)
-            ul.append(
-                '<li class="list-group-item">' + device.name + '</li>\n'
-            )
-        })
-        $('.page-section-devices').append(ul)
+        setupDeviceCards()
     }
 
-    function selectPageSection(section, collapse) {
+    function setupDeviceCards() {
+        var section = $('.page-section-devices')
+        section.empty()
+
+        var template = $('.template-devicecard').html()
+        Profile.devices.forEach(function (device) {
+            console.log("device:", device)
+            var online = device.lastseen - new Date().getTime() < 60
+            var deviceElement = $(template.formatUnicorn({
+                title: device.name,
+                deviceid: device.id.substr(0, 7),
+                online: online ? "online" : offline,
+                id: 'device-' + device.id,
+            }))
+            section.append(deviceElement)
+
+
+            deviceElement.find('.btn-add-function').on('click', function (e) {
+                console.log("hi")
+                newFunctionLine(device)
+                    .hide()
+                    .appendTo(deviceElement.find('ul'))
+                    .slideDown();
+            })
+        })
+        if (Profile.functions !== null) {
+            Profile.functions.forEach(function (f) {
+                // add each existing function to the list
+                var id = 'device-' + f.deviceid
+                var deviceElement = $('#' + id)
+                try {
+                    getWidget(f).appendTo(deviceElement.find('ul'))
+                } catch (e) {
+                    console.log("No such device:", id, e)
+                }
+            })
+        }
+    }
+
+    function newFunctionLine(device) {
+        var template = $('.template-functionline').html()
+        var elm = $(template)
+        var functionline = $(elm.closest('li.list-group-item'))
+        console.log("fl:", functionline)
+
+        function dismiss() {
+            functionline.slideUp(functionline.remove)
+        }
+
+        elm.find('.btn-cancel').click(function () {
+            dismiss()
+        })
+
+        elm.find('.btn-save').click(function () {
+            console.log("saving...")
+            var func = {
+                "name": functionline.find('.function-name').val(),
+                "pin": parseInt(functionline.find('.function-pin').val()),
+                "cmd": "DW",
+                "deviceid": device.id,
+                "data": {
+                    "uielement": functionline.find('.function-dw-type').val(),
+                    "invert": functionline.find('.function-dw-invert').is(':checked'),
+                },
+            }
+
+            console.log("func:", func)
+            $.post("/api/newfunction", JSON.stringify(func), function (resp) {
+                console.log("api newfunction response:", resp)
+            }, 'json')
+
+            dismiss()
+        })
+
+        return elm
+    }
+
+    function getWidget(func) {
+        console.log("newfunc!")
+        var tmpl = '<li class="list-group-item"><span class="text-muted align-middle">{name}</span>\n' +
+            '  <div class="switch">\n' +
+            '    <label>\n' +
+            '      <input id="lightswitch" type="checkbox" checked="checked"/><span class="slider round"></span>\n' +
+            '    </label>\n' +
+            '  </div>\n' +
+            '</li>'
+
+        var elm = $(tmpl.formatUnicorn({
+            name: func.name,
+        }))
+        var value = false
+        elm.find('input').change(function (e) {
+            console.log("Clicked", this.checked)
+            executeFunction({
+                "id": func.deviceid,
+                "cmd": "DW {pin} {val}".formatUnicorn({
+                    pin: func.pin,
+                    val: (this.checked ^ func.data.invert) ? "HIGH" : "LOW"
+                })
+            })
+        })
+        return elm
+    }
+
+
+    function collapseNavbar() {
+        $('#navbarResponsive').collapse('hide')
+        $('.tooltip.navbar-sidenav-tooltip.fade.bs-tooltip-right.show').hide()
+    }
+
+    function selectPageSection(section) {
         $('.page-section').hide()
         var sec = $('.page-section-' + section).show()
         var tit = $('li[data-nav-target=' + section + ']').text()
         $('.navbar-brand').text(tit)
 
-
-        if (collapse) {
-            $('.navbar-toggler').addClass('collapsed')
-            $('#navbarResponsive').removeClass("show")
-            $('.navbar-toggler').attr('aria-expanded', false)
-            $('.tooltip.navbar-sidenav-tooltip.fade.bs-tooltip-right.show').hide()
-        }
+        collapseNavbar()
     }
 
+    $('#nav-signout').click(function (e) {
+        collapseNavbar()
+    })
     $('li[data-nav-target]').click(function (e) {
         e.preventDefault()
-        selectPageSection($(this).attr('data-nav-target'), true)
+        selectPageSection($(this).attr('data-nav-target'))
     })
 
 

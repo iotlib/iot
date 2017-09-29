@@ -1,0 +1,48 @@
+script.template-functionline(type="text/x-custom-template")
+    li.list-group-item
+        form
+            .form-row.align-items-center
+                .form-group.col-12.col-sm-6
+                    small.text-muted Function name
+                    input.function-name.form-control(type='text' placeholder="Name")
+
+                .form-group.col-6.col-sm-2
+                    small.text-muted Pin
+                    input.function-pin.form-control(
+                        type='tel'
+                        placeholder="Pin"
+                        onkeypress='return event.charCode >= 48 && event.charCode <= 57'
+                    )
+
+                // for now, always digital write
+                //.form-group.col-6.col-sm-4
+                    small.text-muted Function
+                    br
+                    select.custom-select
+                        option(value='DW' selected) Digital Write
+                        option(value='DR') Digital Read
+                        option(value='AW') Analog Write
+                        option(value='AR') Analog Read
+
+
+
+            .form-row.align-items-center
+                .form-group.col-auto.func-dw.func-group
+                    label.custom-control.custom-checkbox.mb-2.mr-sm-2.mb-sm-0
+                        input.function-dw-invert.custom-control-input(type='checkbox')
+                        span.custom-control-indicator
+                        span.custom-control-description Invert
+
+                .form-group.col-auto.func-dw.func-group
+                    select.function-dw-type.custom-select.mb-2.mr-sm-2.mb-sm-0
+                        option(value='switch' selected) Switch
+                        option(value='button') Push button
+                        option(value="tmr") Timer button
+
+
+            .form-row.align-items-center
+                .col-12
+                    span.pull-right
+                        input(type="button" value="Cancel").btn-cancel.btn.btn-secondary
+                        span &nbsp;
+                        input(type="button" value="Save").btn-save.btn.btn-primary
