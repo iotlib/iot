@@ -10,7 +10,7 @@ ESP8266WiFiMulti WiFiMulti;
 Messenger m;
 Processor proc(&m);
 
-#define LED_PIN D4
+#define LED_PIN LED_BUILTIN
 
 void onMessage(uint8_t *payload, size_t length) {
   proc.process(payload, length);
@@ -69,10 +69,11 @@ void setup() {
 void loop() {
     m.loop();
     // blink for 50ms
-    /*
+
+/*
     digitalWrite(LED_PIN, LOW);
     delay(50);
     digitalWrite(LED_PIN, HIGH);
     delay(100);
-    */
+*/
 }

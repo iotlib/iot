@@ -36,6 +36,8 @@ void Messenger::begin(
       onConnected();
       break;
     case WStype_TEXT:
+      Serial.print("Got cmd: ");
+      Serial.println((char*)payload);
       onMessage(payload, length);
       break;
     }

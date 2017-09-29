@@ -17,6 +17,7 @@ void Processor::process(uint8_t *payload, size_t length) {
     String pinStr = splitSpaceTrim(cmd, 1);
     int pin = atoi(pinStr.c_str());
     String val = splitSpaceTrim(cmd, 2);
+    pinMode(pin, OUTPUT);
     digitalWrite(pin, val == VAL_HIGH ? HIGH : LOW);
     return;
   }
@@ -24,6 +25,7 @@ void Processor::process(uint8_t *payload, size_t length) {
   if (op == CMD_ANALOG_READ) {
     String pinStr = splitSpaceTrim(cmd, 1);
     int pin = atoi(pinStr.c_str());
+    pinMode(pin, INPUT);
     int value = analogRead(pin);
     messenger->send(op + " " + pinStr + String(value));
     return;
@@ -34,6 +36,7 @@ void Processor::process(uint8_t *payload, size_t length) {
     int pin = atoi(pinStr.c_str());
     String valStr = splitSpaceTrim(cmd, 2);
     int val = atoi(valStr.c_str());
+    pinMode(pin, OUTPUT);
     analogWrite(pin, val);
     return;
   }
