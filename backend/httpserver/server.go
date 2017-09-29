@@ -1,14 +1,15 @@
 package httpserver
 
 import (
+	"net/http"
+
+	"github.com/Don-V/mongostore"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	"github.com/kidstuff/mongostore"
 	"github.com/twinone/iot/backend/db"
 	"github.com/twinone/iot/backend/ws"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-	"net/http"
 )
 
 type Server struct {
@@ -24,7 +25,7 @@ func New(config map[string]*string, hub *ws.Hub) (s *Server) {
 		store: mongostore.NewMongoStore(
 			db.GetCookieCollection(),
 			3600*24*365*10,
-			true,
+			false,
 			[]byte(*config["cookie_store_secret"])),
 
 		cfg: &oauth2.Config{
@@ -53,7 +54,9 @@ func (s *Server) RegisterHandlers(r *mux.Router) {
 	r.HandleFunc("/auth/callback", s.authCallbackHandler)
 
 	// protected endpoints
-	r.PathPrefix("/api").Handler(s.Auth(s.apiHandler))
+	apiRouter := r.PathPrefix("/api/").Subrouter()
+	s.registerApiHandlers(apiRouter)
+
 	r.HandleFunc("/signout", s.Auth(s.signOutHandler))
 	r.HandleFunc("/dashboard", s.Auth(s.dashboardHandler))
 

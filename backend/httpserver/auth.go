@@ -36,6 +36,9 @@ func (s *Server) signinHandler(w http.ResponseWriter, r *http.Request) {
 	uid := randToken()
 	if id, ok := c.Values["state"]; ok {
 		uid = id.(string)
+		log.Println("SigninHandler found id:", id.(string))
+	} else {
+		log.Println("SigninHandler found nothing", id)
 	}
 	c.Values["state"] = uid
 	c.Save(r, w)
@@ -79,7 +82,7 @@ func (s *Server) authCallbackHandler(w http.ResponseWriter, r *http.Request) {
 	var authedUser = &model.User{}
 	json.Unmarshal(data, authedUser)
 
-	dbUser := db.GetUserByEmail(authedUser.Email)
+	dbUser := db.FindUserByEmail(authedUser.Email)
 	if dbUser == nil {
 		db.InsertUser(authedUser)
 	}
@@ -94,6 +97,7 @@ func (s *Server) authCallbackHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) signOutHandler(w http.ResponseWriter, r *http.Request, cookie *sessions.Session, user *model.User) {
 	tok := cookie.Values["state"]
+	log.Println("WARNING DEAUTHENTICATING TOKEN:", tok.(string))
 	db.RemoveAccessToken(tok.(string))
 
 	// Generate a new state for the user
@@ -106,9 +110,11 @@ func (s *Server) signOutHandler(w http.ResponseWriter, r *http.Request, cookie *
 func (s *Server) GetUser(cookie *sessions.Session) *model.User {
 	tok, ok := cookie.Values["state"]
 	if !ok {
+		log.Println("No token")
 		return nil
 	}
-	return db.GetUserByAccessToken(tok.(string))
+	log.Println("Get user for token", tok)
+	return db.FindUserByAccessToken(tok.(string))
 }
 
 func (s *Server) getLoginURL(state string) string {

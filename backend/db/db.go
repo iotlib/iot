@@ -4,6 +4,7 @@ import (
 	"github.com/twinone/iot/backend/model"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
+	"log"
 )
 
 const (
@@ -11,6 +12,7 @@ const (
 	CookieCollection      = "cookies"
 	UsersCollection       = "users"
 	AccesTokensCollection = "accesstokens"
+	FunctionsCollection   = "functions"
 )
 
 var defaultSession *mgo.Session
@@ -20,7 +22,7 @@ func GetCookieCollection() *mgo.Collection {
 }
 
 // Gets the requested user or nil they it doesn't exist
-func GetUserByEmail(email string) *model.User {
+func FindUserByEmail(email string) *model.User {
 	s := defaultSession.Copy()
 	defer s.Close()
 
@@ -32,7 +34,7 @@ func GetUserByEmail(email string) *model.User {
 	return u
 }
 
-func GetUserByAccessToken(token string) *model.User {
+func FindUserByAccessToken(token string) *model.User {
 	s := defaultSession.Copy()
 	defer s.Close()
 
@@ -41,7 +43,7 @@ func GetUserByAccessToken(token string) *model.User {
 	if err := c.Find(bson.M{"token": token}).One(t); err != nil {
 		return nil
 	}
-	return GetUserByEmail(t.Email)
+	return FindUserByEmail(t.Email)
 }
 
 func InsertAccessToken(t *model.AccessToken) {
@@ -50,6 +52,42 @@ func InsertAccessToken(t *model.AccessToken) {
 
 	c := s.DB(DBName).C(AccesTokensCollection)
 	c.Insert(t)
+}
+
+func FindFunctionsByEmail(email string) []*model.Function {
+	s := defaultSession.Copy()
+	defer s.Close()
+
+	var f []*model.Function
+	c := s.DB(DBName).C(FunctionsCollection)
+	if err := c.Find(bson.M{"owner": email}).All(&f); err != nil {
+		log.Println(err)
+		return nil
+	}
+	log.Println("Found functions:", f)
+	return f
+}
+
+func FindFunctionById(id string) *model.Function {
+	s := defaultSession.Copy()
+	defer s.Close()
+
+	f := &model.Function{}
+	c := s.DB(DBName).C(FunctionsCollection)
+	if err := c.Find(bson.M{"id": id}).One(f); err != nil {
+		log.Println(err)
+		return nil
+	}
+	log.Println("Found function:", f)
+	return f
+}
+
+func InsertFunction(f *model.Function) {
+	s := defaultSession.Copy()
+	defer s.Close()
+
+	c := s.DB(DBName).C(FunctionsCollection)
+	c.Insert(f)
 }
 
 func RemoveAccessToken(token string) {

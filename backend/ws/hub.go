@@ -2,7 +2,6 @@ package ws
 
 import (
 	"github.com/twinone/iot/backend/model"
-	"log"
 )
 
 var DefaultHub = NewHub()
@@ -32,8 +31,6 @@ func (h *Hub) GetConns(owner string) []*Conn {
 	res := make([]*Conn, 0, len(idmap))
 
 	for k, _ := range idmap {
-
-		log.Println(k)
 		if conn, ok := h.IdsToConns[k]; ok {
 			res = append(res, conn)
 		}
@@ -46,20 +43,24 @@ func (h *Hub) GetDevices(owner string) []*model.Device {
 	res := make([]*model.Device, 0, len(idmap))
 
 	for k, _ := range idmap {
-
-		log.Println(k)
 		if conn, ok := h.IdsToConns[k]; ok {
-			res = append(res, conn.device)
+			res = append(res, conn.Device)
 		}
 	}
 	return res
 }
 
 func (h *Hub) Run() {
+	cleanup := func(conn *Conn) {
+		delete(h.IdsToConns, conn.Device.Id)
+		delete(h.conns, conn)
+		conn.Close()
+	}
+
 	defer func() {
 
 		for c, _ := range h.conns {
-			c.Close()
+			cleanup(c)
 		}
 		close(h.register)
 		close(h.unregister)
@@ -69,16 +70,16 @@ func (h *Hub) Run() {
 		select {
 		case conn := <-h.register:
 			h.conns[conn] = true
-			if _, ok := h.OwnersToIds[conn.device.Owner]; !ok {
-				h.OwnersToIds[conn.device.Owner] = make(map[string]bool)
+			if _, ok := h.OwnersToIds[conn.Device.Owner]; !ok {
+				h.OwnersToIds[conn.Device.Owner] = make(map[string]bool)
 			}
-			h.OwnersToIds[conn.device.Owner][conn.device.Id] = true
-			h.IdsToConns[conn.device.Id] = conn
+			h.OwnersToIds[conn.Device.Owner][conn.Device.Id] = true
+			h.IdsToConns[conn.Device.Id] = conn
 
 			//log.Println("Registered conn")
 		case conn := <-h.unregister:
 			//log.Println("Unregistered conn")
-			delete(h.conns, conn)
+			cleanup(conn)
 		}
 	}
 }

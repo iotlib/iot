@@ -1,14 +1,14 @@
 package ws
 
 import (
-	"github.com/gorilla/websocket"
-	"github.com/twinone/iot/backend/model"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/twinone/iot/backend/model"
 )
 
 type State int
@@ -51,7 +51,7 @@ type Conn struct {
 	Send chan []byte
 	Recv chan []byte
 
-	device *model.Device
+	Device *model.Device
 
 	mx     sync.Mutex
 	closed bool
@@ -73,7 +73,6 @@ func (c *Conn) writePump() {
 			c.ws.SetWriteDeadline(time.Now().Add(writeWait))
 			c.ws.WriteMessage(websocket.TextMessage, msg)
 		case <-ticker.C:
-			log.Print("ping... ")
 			if err := c.ws.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 				return
 			}
@@ -86,7 +85,7 @@ func (c *Conn) readPump() {
 	c.ws.SetReadLimit(maxMessageSize)
 	c.ws.SetReadDeadline(time.Now().Add(pongWait))
 	c.ws.SetPongHandler(func(string) error {
-		c.device.LastSeen = time.Now().Unix()
+		c.Device.LastSeen = time.Now().Unix()
 		c.ws.SetReadDeadline(time.Now().Add(pongWait))
 		return nil
 	})
@@ -98,7 +97,7 @@ func (c *Conn) readPump() {
 			//}
 			break
 		}
-		c.device.LastSeen = time.Now().Unix()
+		c.Device.LastSeen = time.Now().Unix()
 		log.Println("RECV:", string(message))
 		c.processMessage(message)
 
@@ -117,45 +116,26 @@ func (c *Conn) processMessage(message []byte) {
 	cmd := strings.Trim(ss[0], " \t\r\n")
 	switch cmd {
 	case model.RespHello:
-		if len(ss) < 2 || c.device.State != model.StatePendingHello {
+		if len(ss) < 2 || c.Device.State != model.StatePendingHello {
 			c.Close()
 			return
 		}
-		c.device.Id = ss[1]
+		c.Device.Id = ss[1]
 		// TODO check if id is ok
-		c.device.State = model.StatePendingOwner
+		c.Device.State = model.StatePendingOwner
 	case model.RespOwner:
-		if len(ss) < 2 || c.device.State != model.StatePendingOwner {
+		if len(ss) < 2 || c.Device.State != model.StatePendingOwner {
 			c.Close()
 			return
 		}
-		c.device.Owner = ss[1]
+		c.Device.Owner = ss[1]
 		// TODO check if owner is registered etc
-		c.device.State = model.StateConnected
+		c.Device.State = model.StateConnected
 		c.hub.register <- c
 	case model.RespName:
 		if len(ss) >= 2 {
-			c.device.Name = strings.Trim(strings.SplitN(msg, " ", 2)[1], " \t\n")
+			c.Device.Name = strings.Trim(strings.SplitN(msg, " ", 2)[1], " \t\n")
 		}
-	case model.RespCap:
-		if len(ss) < 4 {
-			c.Close()
-			return
-		}
-		pin, err := strconv.Atoi(ss[1])
-		if err != nil {
-			log.Println("Error:", err)
-			c.Close()
-			return
-		}
-		cmd := ss[2]
-		name := strings.Trim(strings.SplitN(msg, " ", 4)[3], " \t\n")
-
-		c.device.Caps = append(c.device.Caps, model.Cap{
-			Cmd:  cmd,
-			Pin:  pin,
-			Name: name,
-		})
 
 	case model.RespBye:
 		c.Close()
@@ -175,7 +155,7 @@ func (c *Conn) Close() {
 		close(c.Send)
 		close(c.Recv)
 		c.ws.Close()
-		if c.device.State == model.StateConnected {
+		if c.Device.State == model.StateConnected {
 			c.hub.unregister <- c
 		}
 	}
@@ -192,7 +172,7 @@ func GenWSHandler(hub *Hub) func(w http.ResponseWriter, r *http.Request) {
 		conn := &Conn{
 			Send: make(chan []byte, queueSize),
 			Recv: make(chan []byte, queueSize),
-			device: &model.Device{
+			Device: &model.Device{
 				State: model.StatePendingHello,
 			},
 			ws:  ws,
