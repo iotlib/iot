@@ -22,10 +22,10 @@ html(lang='en')
     include includes/navbar.pug
     .content-wrapper
       .container-fluid
-        .container.page-section.page-section-dashboard
-        .container.page-section.page-section-devices
-        .container.page-section.page-section-guests
-        .container.page-section.page-section-account
+        .page-section.page-section-dashboard
+        .row.page-section.page-section-devices
+        .page-section.page-section-guests
+        .page-section.page-section-account
 
       // /.container-fluid
       // /.content-wrapper
@@ -36,8 +36,10 @@ html(lang='en')
 
       include includes/modals/logout.pug
 
+      // jQuery etc
       include includes/js/core.pug
 
+      script(src='js/pre.min.js')
 
       include templates/devicecard
       include templates/functionline

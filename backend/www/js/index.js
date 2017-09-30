@@ -1,30 +1,11 @@
 (function ($) {
-    // see https://stackoverflow.com/a/18234317
-    String.prototype.formatUnicorn = function () {
 
-        var str = this.toString();
-        if (arguments.length) {
-            var t = typeof arguments[0];
-            var key;
-            var args = ("string" === t || "number" === t) ?
-                Array.prototype.slice.call(arguments)
-                : arguments[0];
-
-            for (key in args) {
-                str = str.replace(new RegExp("\\{" + key + "\\}", "gi"), args[key]);
-            }
-        }
-
-        return str;
-    };
 
     "use strict" // Start of use strict
 
 
     function setup() {
         selectPageSection("devices")
-
-
     }
 
     setup()
@@ -36,10 +17,6 @@
 
         onProfileLoaded()
     })
-
-    function onLightButtonClick() {
-        console.log("ok")
-    }
 
     function executeFunction(cmd) {
         console.log("posting:", cmd)
@@ -63,9 +40,9 @@
             var online = device.lastseen - new Date().getTime() < 60
             var deviceElement = $(template.formatUnicorn({
                 title: device.name,
-                deviceid: device.id.substr(0, 7),
+                deviceid: device._id.substr(0, 7),
                 online: online ? "online" : offline,
-                id: 'device-' + device.id,
+                id: 'device-' + device._id,
             }))
             section.append(deviceElement)
 
@@ -81,25 +58,27 @@
         if (Profile.functions !== null) {
             Profile.functions.forEach(function (f) {
                 // add each existing function to the list
-                var id = 'device-' + f.deviceid
-                var deviceElement = $('#' + id)
-                try {
-                    getWidget(f).appendTo(deviceElement.find('ul'))
-                } catch (e) {
-                    console.log("No such device:", id, e)
-                }
+                addFunctionToDevice(f)
             })
+        }
+    }
+
+    function addFunctionToDevice(f) {
+        var id = 'device-' + f.deviceid
+        var deviceElement = $('#' + id)
+        try {
+            getWidget(f).appendTo(deviceElement.find('ul'))
+        } catch (e) {
+            console.log("No such device:", id, e)
         }
     }
 
     function newFunctionLine(device) {
         var template = $('.template-functionline').html()
         var elm = $(template)
-        var functionline = $(elm.closest('li.list-group-item'))
-        console.log("fl:", functionline)
 
         function dismiss() {
-            functionline.slideUp(functionline.remove)
+            elm.slideUp(elm.remove)
         }
 
         elm.find('.btn-cancel').click(function () {
@@ -109,13 +88,13 @@
         elm.find('.btn-save').click(function () {
             console.log("saving...")
             var func = {
-                "name": functionline.find('.function-name').val(),
-                "pin": parseInt(functionline.find('.function-pin').val()),
+                "name": elm.find('.function-name').val(),
+                "pin": parseInt(elm.find('.function-pin').val()),
                 "cmd": "DW",
-                "deviceid": device.id,
+                "deviceid": device._id,
                 "data": {
-                    "uielement": functionline.find('.function-dw-type').val(),
-                    "invert": functionline.find('.function-dw-invert').is(':checked'),
+                    "uielement": elm.find('.function-dw-type').val(),
+                    "invert": elm.find('.function-dw-invert').is(':checked'),
                 },
             }
 
@@ -123,6 +102,7 @@
             $.post("/api/newfunction", JSON.stringify(func), function (resp) {
                 console.log("api newfunction response:", resp)
             }, 'json')
+            addFunctionToDevice(func)
 
             dismiss()
         })

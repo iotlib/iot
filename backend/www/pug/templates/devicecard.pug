@@ -1,18 +1,32 @@
 script.template-devicecard(type="text/x-custom-template")
-    .card.collapse-card.devicecard
-        .card-header(data-toggle='collapse' data-target="#{id}")
-            h4 {title}
-            small.text-muted.text-uppercase {online} - ID: {deviceid}
-        .card-body-wrapper.collapse.show(id="{id}")
+    .col-lg-6
+        .card.collapse-card.devicecard.card-primary
+            .card-header(data-toggle='collapse' data-target="#{id}")
+                h4 {title}
+                small.text-muted.text-uppercase {online} - ID: {deviceid}
+            .card-body-wrapper.collapse.show(id="{id}")
 
-            // The actual functions of the device
-            ul.list-group.list-group-flush
+                // The actual functions of the device
+                ul.list-group.list-group-flush
 
-            .card-block
-                .card-body.clearfix
-                    .pull-right.clearfix
-                        button.btn-delete-device.small.btn.btn-outline-danger Delete device
-                        span &nbsp;
-                        button.btn-add-function.small.btn.btn-primary Add function
+                .card-block
+                    .card-body.clearfix
+                        .pull-right.clearfix
+                            button.btn-delete-device.small.btn.btn-outline-danger Delete device
+                            span &nbsp;
+                            button.btn-add-function.small.btn.btn-outline-primary Add function
 
-    br
+        br
+
+
+
+script.
+    (function($) {
+        $.fn.devicecard = function() {
+            console.log("hi, i'm a device card")
+        }
+
+
+
+
+    })(jQuery)
