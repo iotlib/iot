@@ -31,6 +31,7 @@ When the owner signs in to the backend, it will see a list of devices that have 
 - [x] Authenticate users securely using OAuth and Google sign in
 - [x] Serving the front end in a secure way
 - [x] Sending commands to the arduino
+- [ ] Sort devices in some consistent order
 - [ ] Make a more consistent API
 - [ ] Refactor the front end into plugins, make it use the API
 - [ ] Documentation and testing (this is something for later, as currently the project is in early prototype stage)
