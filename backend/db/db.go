@@ -1,10 +1,11 @@
 package db
 
 import (
+	"log"
+
 	"github.com/twinone/iot/backend/model"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"log"
 )
 
 const (
@@ -82,12 +83,30 @@ func FindFunctionById(id string) *model.Function {
 	return f
 }
 
-func InsertFunction(f *model.Function) {
+func RemoveFunction(id string, email string) {
+	s := defaultSession.Copy()
+	defer s.Close()
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("Error removing function:", err)
+		}
+	}()
+	c := s.DB(DBName).C(FunctionsCollection)
+	if err := c.Remove(bson.M{"_id": bson.ObjectIdHex(id), "owner": email}); err != nil {
+		log.Println("Error removing function:", err)
+	}
+
+}
+
+func InsertFunction(f *model.Function) string {
 	s := defaultSession.Copy()
 	defer s.Close()
 
 	c := s.DB(DBName).C(FunctionsCollection)
+	i := bson.NewObjectId()
+	f.Id = i
 	c.Insert(f)
+	return i.Hex()
 }
 
 func RemoveAccessToken(token string) {

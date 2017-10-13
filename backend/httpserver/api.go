@@ -42,7 +42,7 @@ func (s *Server) profileHandler(w http.ResponseWriter, r *http.Request, cookie *
 	WriteJSON(w, di)
 }
 
-func (s *Server) newFunctionHandler(w http.ResponseWriter, r *http.Request, cookie *sessions.Session, user *model.User) {
+func (s *Server) functionHandler(w http.ResponseWriter, r *http.Request, cookie *sessions.Session, user *model.User) {
 	decoder := json.NewDecoder(r.Body)
 	var f model.Function
 	err := decoder.Decode(&f)
@@ -64,14 +64,26 @@ func (s *Server) newFunctionHandler(w http.ResponseWriter, r *http.Request, cook
 	}
 
 	f.Owner = user.Email
-	f.Id = randToken()
-	db.InsertFunction(&f)
-	w.Write([]byte(f.Id))
+	id := db.InsertFunction(&f)
+
+	WriteJSON(w, map[string]string{
+		"id": id,
+	})
+}
+
+func (s *Server) deleteFunctionHandler(w http.ResponseWriter, r *http.Request, cookie *sessions.Session, user *model.User) {
+	id := mux.Vars(r)["id"]
+	email := user.Email
+
+	log.Println("deleted function:", id, email)
+	db.RemoveFunction(id, email)
+
 }
 
 func (s *Server) registerApiHandlers(r *mux.Router) {
 	r.Handle("/profile", s.Auth(s.profileHandler)).Methods("GET")
-	r.Handle("/newfunction", s.Auth(s.newFunctionHandler)).Methods("POST")
+	r.Handle("/function", s.Auth(s.functionHandler)).Methods("POST", "GET")
+	r.Handle("/function/{id}", s.Auth(s.deleteFunctionHandler)).Methods("DELETE")
 	r.Handle("/exec", s.Auth(s.execHandler)).Methods("POST")
 }
 
@@ -80,6 +92,7 @@ func WriteJSON(w http.ResponseWriter, obj interface{}) {
 	if err != nil {
 		log.Println("Error marshaling json:", err)
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(data)
 }

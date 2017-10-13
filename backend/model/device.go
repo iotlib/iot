@@ -14,7 +14,6 @@ const (
 	RespHello Response = "HELLO"
 	RespOwner          = "OWNER"
 	RespName           = "NAME"
-	RespCap            = "CAP"
 	RespBye            = "BYE"
 )
 
@@ -27,11 +26,12 @@ const (
 
 // Not to be stored in database
 type Device struct {
-	Id        string     `json:"id"`
+	Id    string `json:"id"`
+	Owner string `json:"owner"`
+
 	Name      string     `json:"name"`
-	Owner     string     `json:"owner"`
-	Caps      []Function `json:"caps"`
+	Confirmed bool       `json:"confirmed"`
+	Functions []Function `json:"functions"`
 	State     State      `json:"state"`
 	LastSeen  int64      `json:"lastseen"`
-	Confirmed bool       `json:"confirmed"`
 }

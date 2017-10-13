@@ -1,5 +1,7 @@
 package model
 
+import "gopkg.in/mgo.v2/bson"
+
 type Command = string
 
 const (
@@ -19,11 +21,11 @@ type Execution struct {
 }
 
 type Function struct {
+	Id       bson.ObjectId          `json:"id" bson:"_id,omitempty"`
 	Name     string                 `json:"name"`
-	Pin      int                    `json:"pin"`
 	DeviceId string                 `json:"deviceid"`
-	Id       string                 `json:"id"`
+	Owner    string                 `json:"owner"`
+	Pin      int                    `json:"pin"`
 	Cmd      Command                `json:"cmd"`
 	Data     map[string]interface{} `json:"data"`
-	Owner    string                 `json:"owner"`
 }

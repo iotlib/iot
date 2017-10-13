@@ -3,23 +3,43 @@
 
     "use strict" // Start of use strict
 
+    var Profile = {};
+
 
     function setup() {
         selectPageSection("devices")
+
+        // load profile
+        $.getJSON("/api/profile", function (data) {
+            console.log("Json resp:", data)
+            Profile = data
+            console.log(JSON.stringify(data, " ", " "))
+
+            onProfileLoaded()
+        })
+
+
     }
 
     setup()
 
-    $.getJSON("/api/profile", function (data) {
-        console.log("Json resp:", data)
-        window.Profile = data
-        console.log(JSON.stringify(data, " ", " "))
 
-        onProfileLoaded()
-    })
+    function api(method, path, data, success, error) {
+
+        $.ajax({
+            url: '/api' + path,
+            method: method,
+            success: success,
+            error: error,
+            data: data,
+            dataType: "json",
+        })
+    }
+
+    window.api = api
+
 
     function executeFunction(cmd) {
-        console.log("posting:", cmd)
         $.post("/api/exec", JSON.stringify(cmd), function (resp) {
             console.log("api cmd response:", resp)
         }, 'json')
@@ -27,10 +47,20 @@
 
 
     function onProfileLoaded() {
-        setupDeviceCards()
+        setupDeviceSection()
+        setupAccountSection()
     }
 
-    function setupDeviceCards() {
+    function setupAccountSection() {
+        var tmpl = $('.template-collapsecard').html()
+        $(tmpl.formatUnicorn({
+            id: "account-card",
+            title: Profile.user.name,
+            subtitle: Profile.user.email,
+        })).appendTo('.page-section-account')
+    }
+
+    function setupDeviceSection() {
         var section = $('.page-section-devices')
         section.empty()
 
@@ -40,19 +70,16 @@
             var online = device.lastseen - new Date().getTime() < 60
             var deviceElement = $(template.formatUnicorn({
                 title: device.name,
-                deviceid: device._id.substr(0, 7),
+                deviceid: device.id.substr(0, 7),
                 online: online ? "online" : offline,
-                id: 'device-' + device._id,
+                id: 'device-' + device.id,
             }))
             section.append(deviceElement)
 
 
             deviceElement.find('.btn-add-function').on('click', function (e) {
-                console.log("hi")
-                newFunctionLine(device)
-                    .hide()
-                    .appendTo(deviceElement.find('ul'))
-                    .slideDown();
+                addNewFunctionLineToDevice(device.id)
+
             })
         })
         if (Profile.functions !== null) {
@@ -67,13 +94,13 @@
         var id = 'device-' + f.deviceid
         var deviceElement = $('#' + id)
         try {
-            getWidget(f).appendTo(deviceElement.find('ul'))
+            newSwitchFunction(f).appendTo(deviceElement.find('ul'))
         } catch (e) {
             console.log("No such device:", id, e)
         }
     }
 
-    function newFunctionLine(device) {
+    function addNewFunctionLineToDevice(deviceid, savecallback, f) {
         var template = $('.template-functionline').html()
         var elm = $(template)
 
@@ -85,44 +112,65 @@
             dismiss()
         })
 
+        if (f !== undefined) {
+            console.log("editing")
+            elm.find('.function-name').val(f.name || '')
+            elm.find('.function-pin').val(f.pin || '')
+            elm.find('.function-dw-invert').prop('checked', f.data.invert || false)
+
+            elm.find('.btn-cancel').click(function () {
+                // add it back
+                addFunctionToDevice(f)
+            })
+        }
+
+
         elm.find('.btn-save').click(function () {
+
             console.log("saving...")
             var func = {
                 "name": elm.find('.function-name').val(),
                 "pin": parseInt(elm.find('.function-pin').val()),
                 "cmd": "DW",
-                "deviceid": device._id,
+                "deviceid": deviceid,
                 "data": {
                     "uielement": elm.find('.function-dw-type').val(),
                     "invert": elm.find('.function-dw-invert').is(':checked'),
                 },
             }
-
             console.log("func:", func)
-            $.post("/api/newfunction", JSON.stringify(func), function (resp) {
-                console.log("api newfunction response:", resp)
-            }, 'json')
+            api("POST", "/function", JSON.stringify(func), function (data) {
+                func.id = data.id
+            }, function (e) {
+            })
+
+            if (savecallback !== undefined) savecallback()
+
             addFunctionToDevice(func)
 
             dismiss()
         })
 
+        var deviceElement = $('#device-' + deviceid)
+
+        elm.hide()
+            .appendTo(deviceElement.find('ul'))
+            .slideDown();
+
+
         return elm
     }
 
-    function getWidget(func) {
-        console.log("newfunc!")
-        var tmpl = '<li class="list-group-item"><span class="text-muted align-middle">{name}</span>\n' +
-            '  <div class="switch">\n' +
-            '    <label>\n' +
-            '      <input id="lightswitch" type="checkbox" checked="checked"/><span class="slider round"></span>\n' +
-            '    </label>\n' +
-            '  </div>\n' +
-            '</li>'
-
+    function newSwitchFunction(func) {
+        var tmpl = $('.template-switchfunction').html()
         var elm = $(tmpl.formatUnicorn({
             name: func.name,
         }))
+
+        function dismiss() {
+            elm.slideUp(elm.remove)
+        }
+
         var value = false
         elm.find('input').change(function (e) {
             console.log("Clicked", this.checked)
@@ -133,6 +181,22 @@
                     val: (this.checked ^ func.data.invert) ? "HIGH" : "LOW"
                 })
             })
+        })
+        elm.find('.btn-remove').click(function (e) {
+            dismiss()
+            console.log(func)
+            api("DELETE", "/function/" + func.id, null, function () {
+                console.log("deleted function", func.id)
+            })
+        })
+        elm.find('.btn-edit').click(function (e) {
+            dismiss()
+            console.log(func)
+            addNewFunctionLineToDevice(func.deviceid, function () {
+                api("DELETE", "/function/" + func.id, null, function () {
+                    console.log("deleted function", func.id)
+                })
+            }, func)
         })
         return elm
     }
