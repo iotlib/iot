@@ -49,7 +49,8 @@ A Command is an action to be applied to one or more pins. The ESP runs a small c
 
 ### For the esp
 * Install [PlatformIO](http://platformio.org/)
-* Edit the [config file]()
+* Edit the config file, ([sample](https://github.com/iotlib/iot/blob/master/esp8266/src/config-sample.h)),
+and save it as `config.h`, NOT `config-sample.h`
 * Open the project in atom
 * Build and flash the firmware onto the ESP chip
 
